@@ -1,0 +1,38 @@
+{
+	"message": "首次使用初始化数据",
+	"socketcount": 2,
+	"socket": [
+		{
+			"name": "test1",
+			"status": 1,
+			"plans": [
+				{
+					"time": 1491746820,
+					"case": 0,
+					"isdaily": 1
+				},
+				{
+					"time": 1491746940,
+					"case": 1,
+					"isdaily": 1
+				}
+			]
+		},
+		{
+			"name": "test2",
+			"status": 0,
+			"plans": [
+				{
+					"time": 1491746820,
+					"case": 1,
+					"isdaily": 1
+				},
+				{
+					"time": 1491746940,
+					"case": 0,
+					"isdaily": 1
+				}
+			]
+		}
+	]
+}

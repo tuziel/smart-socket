@@ -1,0 +1,705 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN"><head>
+	<meta charset="utf-8">
+	<!-- 手机端禁止缩放 -->
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>控制面板</title>
+	<!-- 页面样式 -->
+	<style>
+		.body *{background-color:rgba(0,0,0,0.05);box-shadow:0 0 5px rgba(0,0,0,0.5);}
+		body, h1, h2, h3, p, ul, input {
+			margin: 0;
+			padding: 0;
+		}
+		*, *:before, *:after {
+			-webkit-box-sizing: inherit;
+			-moz-box-sizing: inherit;
+			box-sizing: inherit;
+		}
+		html {
+			-webkit-box-sizing:border-box;
+			-moz-box-sizing:border-box;
+			box-sizing:border-box;
+		}
+		body {
+			min-width: 320px;
+			padding-bottom: 100px;
+			background-color: #fafafa;
+			color:#333;
+			font-family:"Helvetica Neue",Helvetica,"Hiragino Sans GB","Microsoft YaHei","微软雅黑",Arial,sans-serif;
+			font-size:16px;
+			line-height: 2;
+		}
+		h1, h2, h3, .t-c {
+			text-align: center;
+		}
+		h1 {
+			background-color: #ddd;
+			font-size: 18px;
+		}
+		h2, h3 {
+			padding: 4px;
+			font-size: 16px;
+		}
+		h3 {
+			position: relative;
+			font-weight: normal;
+		}
+		form {
+			padding: 0 10px 10px;
+		}
+		ul {
+			margin: 0 5px 10px;
+			padding: 0 10px;
+			border: 1px solid #ccc;
+			list-style: none;
+		}
+		li {
+			margin-bottom: -1px;
+			padding: 4px 5px;
+			border-bottom: 1px solid #ccc;
+		}
+		li ul {
+			margin: 0 0 10px;
+		}
+		p {
+			padding: 4px 5px;
+			border-top: 1px solid #ccc;
+		}
+		li, p, input {
+			text-align: right;
+		}
+		li span, p span {
+			float: left;
+		}
+		input, .switch {
+			display: inline-block;
+			margin: 2px;
+			height: 28px;
+			padding: 2px 8px;
+			border: 1px solid #aaa;
+			background-color: #fff;
+			font-size: 14px;
+			vertical-align: top;
+			transition: 0.3s;
+		}
+		input[type="text"], input[type="password"] {
+			width: 12em;
+		}
+		input.submit {
+			width: 100%;
+			margin: 10px 0;
+			border-color: #3c3;
+			color: #3c3;
+			text-align: center;
+		}
+		input:focus {
+			background-color: rgba(0,0,0,0.1);
+		}
+		a {
+			cursor: pointer;
+		}
+		.plans, .plans input {
+			text-align: center;
+		}
+		.plans input[type="text"] {
+			width: 36px;
+		}
+		.switch {
+			width: 64px;
+			height: 28px;
+			padding: 2px 3px;
+			border-radius: 9999px;
+		}
+		.switch input {
+			width: 22px;
+			height: 22px;
+			margin: 0;
+			padding: 0;
+			border: 0;
+			border-radius: 50%;
+			background-color: #999;
+			color: transparent;
+		}
+		.switch.act input {
+			margin-right: 34px;
+			background-color: #3c3;
+		}
+		.mask {
+			position: fixed;
+			top: 0;
+			left: 0;
+			bottom: 0;
+			right: 0;
+			background: rgba(0,0,0,0.3);
+		}
+		.i-arrow {
+			float: left;
+			margin: 9px 5px 0 0;
+			border: 8px solid transparent;
+			border-top: 12px solid #aaa;
+			border-bottom: 0;
+		}
+		.i-arrow.act {
+			border-top: 0;
+			border-bottom: 12px solid #aaa;
+		}
+		.i-add {
+			position: relative;
+			float: right;
+			margin: 4px 5px 0 -24px;
+			width: 24px;
+			height: 24px;
+			border-radius: 50%;
+		}
+		.i-add:before {
+			content: "";
+			position: absolute;
+			top: 4px;
+			left: 11px;
+			height: 16px;
+			border-left: 2px solid #3c3;
+		}
+		.i-add:after {
+			content: "";
+			position: absolute;
+			top: 11px;
+			left: 4px;
+			width: 16px;
+			border-top: 2px solid #3c3;
+		}
+		.i-remove {
+			position: relative;
+			float: left;
+			width: 26px;
+			height: 26px;
+			margin: 3px -26px 0 -5px;
+			border-radius: 50%;
+		}
+		.i-remove:before {
+			content: "";
+			position: absolute;
+			top: 4px;
+			left: 12px;
+			height: 18px;
+			border-left: 2px solid #c33;
+			transform: rotate(45deg);
+		}
+		.i-remove:after {
+			content: "";
+			position: absolute;
+			top: 12px;
+			left: 4px;
+			width: 18px;
+			border-top: 2px solid #c33;
+			transform: rotate(45deg);
+		}
+		.i-level {
+			position: relative;
+			float: right;
+			border: 20px solid transparent;
+			border-top-color: rgba(0,0,0,0.3);
+			border-radius: 50%;
+			margin: 6px 5px -100% -100%;
+		}
+		.i-level:before {
+			content: "";
+			position: absolute;
+			top: -20px;
+			left: -20px;
+			border: 20px solid transparent;
+			border-top-color: rgba(0,0,0,0.2);
+			border-radius: 50%;
+		}
+
+		.detail, #network, .mask {
+			 display: none;
+		}
+		#network {
+			border-top: 1px solid #aaa;
+		}
+		#time, #stainfo {
+			font-size: 14px;
+			text-align: center;
+		}
+		#getap {
+			float: right;
+			margin-left: -100%;
+			padding: 4px;
+			color: rgb(0, 0, 238);
+			font-size: 12px;
+			font-weight: normal;
+		}
+		#aplist:after {
+			position: fixed;
+			top: 0;
+			left: 0;
+			bottom: 0;
+			right: 0;
+			background: #fff;
+		}
+		#aplist {
+			position: fixed;
+			top: 50%;
+			left: 50%;
+			width: 80%;
+			max-height: 50%;
+			overflow-y: scroll;
+			transform: translate(-50%, -50%);
+			background-color: #fff;
+		}
+		#aplist ul {
+			border: 0;
+		}
+		#aplist a {
+			display: block;
+			width: 100%;
+			text-align: center;
+			word-wrap: break-word;
+		}
+	</style>
+</head><body>
+	<h1>控制面板</h1>
+	<form id="config">
+		<h2>开关设置</h2>
+		<p id="time">正在获取时间</p>
+	</form>
+	<form id="network">
+		<h2>网络设置<a id="getap">搜索WLAN</a></h2>
+		<p id="stainfo">网络未连接</p>
+		<p>
+			<span>ssid:</span><input type="text" id="ssid">
+		</p>
+		<p>
+			<span>密码:</span><input type="password" id="psw">
+		</p>
+		<p class="t-c">
+			<input type="button" class="submit" value="连接">
+		</p>
+		<div class="mask"><ul id="aplist"></ul></div>
+	</form>
+
+<script>
+// 简易ajax
+function ajax(url, method, funcS, funcF) {
+	var xhr = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
+	xhr.open(method, url, true);
+	xhr.send();
+	xhr.onreadystatechange = function() {
+		if(xhr.readyState == 4) {
+			if(xhr.status == 200) {
+				funcS(xhr.responseText);
+			} else if(funcF) {
+				funcF(xhr.status);
+			}
+		}
+	}
+}
+
+// 不完全jquery查询器，基于querySelectorAll原生方法
+// 为了节约空间仅保留each, eq, on, css
+function $(selector) {
+	return new $.fn.init(selector);
+}
+$.fn = $.prototype = {
+	constructor: $,
+	init: function(selector) {
+		var elem, i;
+		if(typeof selector === "string") {
+			elem = document.querySelectorAll(selector);
+			for(i=0; i<(this.length = elem.length); i++) {
+				this[i] = elem[i];
+			}
+			this.selector = selector;
+			return this;
+		} else if(selector.nodeType) {
+			this[0] = selector;
+			this.length = 1;
+			this.selector = selector;
+			return this;
+		} else if(this.selector !== undefined) {
+			return selector;
+		}
+	},
+	selector: "",
+	length: 0,
+	each: function(obj, callback, args) {
+		var i = 0,
+			length = obj.length;
+		for(; i<length; i++) {
+			callback.apply(obj[i], args);
+		}
+	},
+	// 返回第i个query对象
+	eq: function(i) {
+		return $(this[i]);
+	},
+	// 事件绑定
+	on: function(event, callback) {
+		this.each(this, function() {
+			this.addEventListener(arguments[0], arguments[1]);
+		}, [event, callback]);
+		return this;
+	},
+	// 获取/设置样式
+	// 没有做属性名转换，只能用js属性例如`webkitTransition`
+	// 不支持对象
+	show: function() {
+		this.each(this, function() {
+			this.style.display = "block";
+		});
+		return this;
+	},
+	hide: function() {
+		this.each(this, function() {
+			this.style.display = "none";
+		});
+		return this;
+	},
+	remove: function() {
+		this.each(this, function() {
+			this.parentNode.removeChild(this);
+		});
+	},
+	css: function(name, value) {
+		if(value === undefined) {
+			return this[0].style[name];
+		}
+		this.each(this, function() {
+			this.style[arguments[0]] = arguments[1];
+		}, [name, value]);
+		return this;
+	},
+	addClass: function(className) {
+		this.each(this, function() {
+			var reg = new RegExp("(\\s|^)"+arguments[0]+"(?=\\s|$)", "g");
+			if(!this.className) {
+				this.className = arguments[0];
+			} else if(reg.test(this.className)) {
+			} else {
+				this.className += " " + arguments[0];
+			}
+		}, [className]);
+		return this;
+	},
+	removeClass: function(className) {
+		this.each(this, function() {
+			var reg = new RegExp("(\\s|^)"+arguments[0]+"(?=\\s|$)", "g");
+			if(this.className) {
+				this.className = this.className.replace(reg, " ");
+			}
+		}, [className]);
+		return this;
+	}
+}
+$.fn.init.prototype = $.prototype;
+
+function formatTime(t) {
+	t = (t-0 < 10 ? "0" : "") + t;
+	return t;
+}
+
+// 数据
+var data = {};
+var stainfo = ["网络未连接", "网络连接中", "密码错误", "找不到网络", "连接失败", "网络已连接"];
+var timer;
+
+// UI
+function Socket(i) {
+	var elm = document.createElement("div"),
+		k = data.socket[i],
+		n = k.name || "开关"+(i+1),
+		s = k.status ? 1 : 0;
+	elm.className = "socket";
+	elm.innerHTML =
+		'<p class="summary">'+
+			'<a class="i-arrow"></a>'+
+			'<span id="n1">'+n+'</span>'+
+			'<a class="switch'+(s?" act":"")+'"><input type="button"></a>'+
+		'</p>'+
+		'<ul class="detail">'+
+			'<li>'+
+				'<span>标签</span>'+
+				'<input type="text" class="s_n" value="'+n+'" maxlength="10">'+
+			'</li>'+
+			'<h3 class="rela"><span>计划</span><a class="i-add"></a></h3>'+
+			'<li>'+
+				'<ul class="plans-list"></ul>'+
+			'</li>'+
+			'<li class="t-c">'+
+				'<input type="button" class="submit" value="保存">'+
+			'</li>'+
+		'</ul>'
+	;
+	elm.querySelector(".summary").onclick = function() {
+		var detail = $(this.nextElementSibling);
+		var swc = $(this.querySelector(".i-arrow"));
+		if(detail.css("display") == "block") {
+			detail.hide();
+			swc.removeClass("act");
+		} else {
+			$(".detail").hide();
+			$(".i-arrow").removeClass("act");
+			detail.show();
+			swc.addClass("act");
+		}
+	};
+	elm.querySelector(".switch").onclick = function(e) {
+		s = data.socket[i].status = 1-s;
+		$(this)[s?"addClass":"removeClass"]("act");
+		switchClick(i+1, s);
+		e.stopPropagation();
+	};
+	elm.querySelector(".i-add").onclick = function() {
+		var l = data.socket[i].plans.length,
+			cur = this,
+			par;
+		data.socket[i].plans[l] = {
+			time: Math.floor(new Date().setSeconds(0)/1000) + 6e2,
+			isdaily: 0,
+			case: 0
+		}
+		while((par = cur.parentNode).className != "detail") {
+			cur = par;
+		}
+		cur = par.querySelector(".plans-list");
+		cur.appendChild(Plans(i, l));
+	};
+	elm.querySelector(".s_n").onchange = function() {
+		n = data.socket[i].name = this.value;
+	};
+	elm.querySelector(".submit").onclick = function() {
+		var p = data.socket[i].plans,
+			p_ = "_",
+			j;
+		for(j=0; j<p.length; j++) {
+			if(p[j]) {
+				p_ += "" + p[j].isdaily + p[j].case + p[j].time + "_";
+			}
+		}
+		configSubmit(i+1, n, p_);
+	};
+	return elm;
+}
+function limitNum(v, l) {
+	v = v.match(/^[0-9]{0,2}/)[0];
+	if(v-0 > l) {
+		v = v.replace(/.$/, "");
+	}
+	return v;
+}
+function Plans(i, j) {
+	var item = document.createElement("li"),
+		p = data.socket[i].plans[j],
+		d = p.isdaily ? 1 : 0,
+		c = p.case ? 1 : 0,
+		t = new Date(p.time*1000),
+		h = t.getHours(),
+		m = t.getMinutes();
+	item.className = "plans";
+	item.innerHTML =
+		'<a class="i-remove"></a>'+
+		'<input type="button" class="s_d" value="'+(d?"每天":"一次")+'">'+
+		'<input type="text" class="s_h" value="'+formatTime(h)+'">:'+
+		'<input type="text" class="s_m" value="'+formatTime(m)+'">'+
+		'<input type="button" class="s_c" value="'+(c?"开":"关")+'">'
+	;
+	item.querySelector(".i-remove").onclick = function() {
+		var cur = this,
+			par;
+		while((par = cur.parentNode).className != "plans-list") {
+			cur = par;
+		}
+		par.removeChild(cur);
+		delete(data.socket[i].plans[j]);
+	}
+	item.querySelector(".s_d").onclick = function() {
+		d = 1 - d;
+		this.value = d == 1 ? "每天" : "一次";
+		data.socket[i].plans[j].isdaily = d;
+	}
+	item.querySelector(".s_h").oninput = function() {
+		this.value = limitNum(this.value, 23);
+	}
+	item.querySelector(".s_h").onchange = function() {
+		var t_ = new Date();
+		v = this.value;
+		this.value = formatTime(v);
+		t.setHours(v);
+		while(t > t_) {
+			t -= 864e5;
+		}
+		while(t < t_) {
+			t = +t + 864e5;
+		}
+		t = new Date(t);
+		data.socket[i].plans[j].time = t/1e3;
+	}
+	item.querySelector(".s_m").oninput = function() {
+		this.value = limitNum(this.value, 60);
+	}
+	item.querySelector(".s_m").onchange = function() {
+		var t_ = new Date();
+		v = this.value;
+		this.value = formatTime(v);
+		t.setMinutes(v);
+		while(t > t_) {
+			t -= 864e5;
+		}
+		while(t < t_) {
+			t = +t + 864e5;
+		}
+		t = new Date(t);
+		data.socket[i].plans[j].time = t/1e3;
+	}
+	item.querySelector(".s_c").onclick = function() {
+		c = 1 - c;
+		this.value = c == 1 ? "开" : "关";
+		data.socket[i].plans[j].case = c;
+	}
+	return item;
+}
+function Apitem(ssid, rssi) {
+	var item = document.createElement("li");
+	item.innerHTML = '<a class="apitem">'+ssid+'<i class="i-level"></i></a>';
+	item.querySelector(".apitem").onclick = function() {
+		$("#ssid")[0].value = this.textContent;
+	}
+	item.querySelector(".i-level").style = "border-width:"+rssi+"px;margin-top:"+(26-rssi)+"px;margin-right:"+(25-rssi)+"px;";
+	return item;
+}
+$("#getap").on("click", function() {
+	$("#stainfo")[0].innerHTML = "WLAN搜索中";
+	getapClick();
+});
+$(".mask").on("click", function() {
+	$(this).hide();
+});
+
+function setPage() {
+	var i, j, l;
+	$(".socket").remove();
+	$(".plans").remove();
+	for(i=0; i<data.socketcount; i++) {
+		$("#config")[0].appendChild(Socket(i));
+		if(!data.socket[i].plans[0]) {
+			data.socket[i].plans = [];
+		}
+		l = data.socket[i].plans.length;
+		for(j=0; j<l; j++) {
+			$(".plans-list")[i].appendChild(Plans(i, j));
+		}
+	}
+	setClock();
+	if(data.wifimode=="3") {
+		$("#network").show();
+		getStainfo();
+	}
+}
+function setClock() {
+	clearInterval(timer);
+	if(data.date) {
+		var l = [], p, i, j, k = 0;
+		for(i=data.socketcount; i--;) {
+			p = data.socket[i].plans;
+			for(j=p.length; j--;) {
+				l[k++] = p[j].time;
+			}
+		}
+		timer = setInterval(function() {
+			var t, h, m, s;
+			data.date++;
+			t = new Date(data.date*1000);
+			$("#time")[0].innerHTML = formatTime(t.getHours()) + " : " + formatTime(t.getMinutes()) + " : " + formatTime(t.getSeconds());
+			for(i=l.length; i--;) {
+				if(t/1000 > l[i]) {
+					init();
+					break;
+				}
+			}
+		}, 1000);
+	} else {
+		$("#time")[0].innerHTML = "无法获得时间";
+	}
+}
+function setDatetime() {
+	var t = Math.floor(new Date()/1000)
+	ajax("./time?t="+t, "POST", function(txt) {
+		data.date = txt-0;
+	});
+}
+function setStainfo(info) {
+	if(info[0] == 5) {
+		$("#stainfo")[0].innerHTML = stainfo[info[0]] + " ip: " + info[1];
+	} else {
+		$("#stainfo")[0].innerHTML = stainfo[info[0]];
+		setDatetime();
+	}
+}
+function setAplist(ap) {
+	var rssi = 0;
+	for(ssid in ap) {
+		rssi = (100-ap[ssid].match(/,-(\d+),/)[1])/3;
+		rssi = rssi<0 ? 0 : (rssi>20 ? 20 : rssi);
+		$("#aplist")[0].appendChild(Apitem(ssid, rssi));
+	}
+}
+
+// ajax
+function switchClick(i, s) {
+	var q = "i="+i+"&s="+s;
+	ajax("./config?"+encodeURI(q), "POST", function(txt) {
+		data = eval("("+txt+")");
+		setPage();
+	});
+}
+function configSubmit(i, n, p) {
+	var q = "i="+i+"&n="+n+"&p="+p;
+	ajax("./config?"+encodeURI(q), "POST", function(txt) {
+		data = eval("("+txt+")");
+		setPage();
+	});
+}
+function getapClick() {
+	ajax("./network?q=0", "GET", function(txt) {
+		var ap = eval("("+txt+")");
+		$(".mask").show();
+		setAplist(ap);
+		$("#stainfo")[0].innerHTML = "请输入密码(如无密码可留空)";
+	});
+}
+function getStainfo() {
+	ajax("./network", "GET", function(txt) {
+		var info = eval(txt);
+		setStainfo(info);
+	});
+}
+function init() {
+	ajax("./config", "GET", function(txt) {
+		data = eval("("+txt+")");
+		setPage();
+	});
+}
+
+$("#network .submit").on("click", function() {
+	var s = $("#ssid")[0].value,
+		p = $("#psw")[0].value,
+		q = "q=1&s="+s+"&p="+p;
+	if(!s) {
+		alert("请输入ssid");
+		return;
+	}
+	if(p && p.length < 8) {
+		alert("请输入至少8位密码");
+		return;
+	}
+	setStainfo([1,0]);
+	ajax("./network?"+encodeURI(q), "POST", function(txt) {
+		var info = eval(txt);
+		setStainfo(info);
+	});
+});
+window.onload = init();
+
+</script>
+</body></html>
