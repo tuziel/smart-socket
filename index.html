@@ -617,13 +617,13 @@ function setClock() {
 		$("#time")[0].innerHTML = "无法获得时间";
 	}
 }
-function setStaInfo(info) {
+function setStainfo(info) {
 	if(info[0] == 5) {
 		$("#stainfo")[0].innerHTML = stainfo[info[0]] + " ip: " + info[1];
 	} else {
 		$("#stainfo")[0].innerHTML = stainfo[info[0]];
+		setDatetime();
 	}
-	setDatetime();
 }
 function setAplist(ap) {
 	var rssi = 0;
@@ -666,7 +666,7 @@ function getapClick() {
 function getStainfo() {
 	ajax("./network", function(txt) {
 		var info = JSON.parse(txt);
-		setStaInfo(info);
+		setStainfo(info);
 	});
 }
 function init() {
@@ -688,16 +688,15 @@ $("#network .submit").on("click", function() {
 		alert("请输入至少8位密码");
 		return;
 	}
+	setStainfo([1,0]);
 	if(window.location.host=="192.168.1.1") {
 		q = "q=1&s="+s+"&p="+p;
-		setStaInfo([1,0]);
 		ajax("./network?"+encodeURI(q), function(txt) {
 			var info = JSON.parse(txt);
-			setStaInfo(info);
+			setStainfo(info);
 		});
 	} else {
 		q = "q=2&s="+s+"&p="+p;
-		setStaInfo([1,0]);
 		ajax("./network?"+encodeURI(q));
 	}
 });

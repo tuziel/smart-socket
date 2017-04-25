@@ -13,7 +13,7 @@ data = {}						-- 系统数据
 date_ = 0						-- 系统时间
 ip = nil						-- STA模式ip
 stastatus = 0					-- wifi.sta.status()
-remote = "ws://test.com/"		-- 远程服务器地址
+remote = "ws://test.com"		-- 远程服务器地址
 heartbeat = 0					-- 心跳为0时断开websocket连接
 
 
@@ -23,6 +23,8 @@ function initData(data_)
 		data_ = {}
 	end
 
+	-- 设备id, 然而并没有用到
+	data.id = 0
 	-- 系统时间
 	data.date = (data_.date or 0)-0
 	-- wifi名称
@@ -342,6 +344,7 @@ function httpSrv(conn)
 			if(t and heartbeat == 0) then
 				date_, data.date = t, t
 			end
+			saveData(datafile)
 			srvSend(conn, ""..date_)
 
 		else
