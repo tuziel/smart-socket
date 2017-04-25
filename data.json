@@ -1,9 +1,12 @@
 {
-	"message": "首次使用初始化数据",
+	"message": "用来初始化数据,不要放空文件,貌似nodemcu不能读空文件,至少放个花括号{},文件最大支持1024字节,节约使用",
+	"ssid": "ssid",
+	"password": "psw",
+	"message2": "socketcount为插口数量",
 	"socketcount": 2,
 	"socket": [
 		{
-			"name": "test1",
+			"name": "开水",
 			"status": 1,
 			"plans": [
 				{
@@ -19,7 +22,7 @@
 			]
 		},
 		{
-			"name": "test2",
+			"name": "电视",
 			"status": 0,
 			"plans": [
 				{

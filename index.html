@@ -6,7 +6,6 @@
 	<title>控制面板</title>
 	<!-- 页面样式 -->
 	<style>
-		.body *{background-color:rgba(0,0,0,0.05);box-shadow:0 0 5px rgba(0,0,0,0.5);}
 		body, h1, h2, h3, p, ul, input {
 			margin: 0;
 			padding: 0;
@@ -212,7 +211,7 @@
 			border-radius: 50%;
 		}
 
-		.detail, #network, .mask {
+		.detail, .mask {
 			 display: none;
 		}
 		#network {
@@ -281,13 +280,13 @@
 
 <script>
 // 简易ajax
-function ajax(url, method, funcS, funcF) {
+function ajax(url, funcS, funcF) {
 	var xhr = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
-	xhr.open(method, url, true);
+	xhr.open("GET", url, true);
 	xhr.send();
 	xhr.onreadystatechange = function() {
 		if(xhr.readyState == 4) {
-			if(xhr.status == 200) {
+			if(xhr.status == 200 && funcS) {
 				funcS(xhr.responseText);
 			} else if(funcF) {
 				funcF(xhr.status);
@@ -297,7 +296,6 @@ function ajax(url, method, funcS, funcF) {
 }
 
 // 不完全jquery查询器，基于querySelectorAll原生方法
-// 为了节约空间仅保留each, eq, on, css
 function $(selector) {
 	return new $.fn.init(selector);
 }
@@ -457,7 +455,7 @@ function Socket(i) {
 		data.socket[i].plans[l] = {
 			time: Math.floor(new Date().setSeconds(0)/1000) + 6e2,
 			isdaily: 0,
-			case: 0
+			"case": 0
 		}
 		while((par = cur.parentNode).className != "detail") {
 			cur = par;
@@ -474,7 +472,7 @@ function Socket(i) {
 			j;
 		for(j=0; j<p.length; j++) {
 			if(p[j]) {
-				p_ += "" + p[j].isdaily + p[j].case + p[j].time + "_";
+				p_ += "" + p[j].isdaily + p[j]["case"] + p[j].time + "_";
 			}
 		}
 		configSubmit(i+1, n, p_);
@@ -492,7 +490,7 @@ function Plans(i, j) {
 	var item = document.createElement("li"),
 		p = data.socket[i].plans[j],
 		d = p.isdaily ? 1 : 0,
-		c = p.case ? 1 : 0,
+		c = p["case"] ? 1 : 0,
 		t = new Date(p.time*1000),
 		h = t.getHours(),
 		m = t.getMinutes();
@@ -555,7 +553,7 @@ function Plans(i, j) {
 	item.querySelector(".s_c").onclick = function() {
 		c = 1 - c;
 		this.value = c == 1 ? "开" : "关";
-		data.socket[i].plans[j].case = c;
+		data.socket[i].plans[j]["case"] = c;
 	}
 	return item;
 }
@@ -591,10 +589,7 @@ function setPage() {
 		}
 	}
 	setClock();
-	if(data.wifimode=="3") {
-		$("#network").show();
-		getStainfo();
-	}
+	getStainfo();
 }
 function setClock() {
 	clearInterval(timer);
@@ -622,19 +617,13 @@ function setClock() {
 		$("#time")[0].innerHTML = "无法获得时间";
 	}
 }
-function setDatetime() {
-	var t = Math.floor(new Date()/1000)
-	ajax("./time?t="+t, "POST", function(txt) {
-		data.date = txt-0;
-	});
-}
-function setStainfo(info) {
+function setStaInfo(info) {
 	if(info[0] == 5) {
 		$("#stainfo")[0].innerHTML = stainfo[info[0]] + " ip: " + info[1];
 	} else {
 		$("#stainfo")[0].innerHTML = stainfo[info[0]];
-		setDatetime();
 	}
+	setDatetime();
 }
 function setAplist(ap) {
 	var rssi = 0;
@@ -646,37 +635,43 @@ function setAplist(ap) {
 }
 
 // ajax
+function setDatetime() {
+	var t = Math.floor(new Date()/1000)
+	ajax("./time?t="+t, function(txt) {
+		data.date = txt-0;
+	});
+}
 function switchClick(i, s) {
 	var q = "i="+i+"&s="+s;
-	ajax("./config?"+encodeURI(q), "POST", function(txt) {
-		data = eval("("+txt+")");
+	ajax("./config?"+encodeURI(q), function(txt) {
+		data = JSON.parse(txt);
 		setPage();
 	});
 }
 function configSubmit(i, n, p) {
 	var q = "i="+i+"&n="+n+"&p="+p;
-	ajax("./config?"+encodeURI(q), "POST", function(txt) {
-		data = eval("("+txt+")");
+	ajax("./config?"+encodeURI(q), function(txt) {
+		data = JSON.parse(txt);
 		setPage();
 	});
 }
 function getapClick() {
-	ajax("./network?q=0", "GET", function(txt) {
-		var ap = eval("("+txt+")");
+	ajax("./network?q=0", function(txt) {
+		var ap = JSON.parse(txt);
 		$(".mask").show();
 		setAplist(ap);
 		$("#stainfo")[0].innerHTML = "请输入密码(如无密码可留空)";
 	});
 }
 function getStainfo() {
-	ajax("./network", "GET", function(txt) {
-		var info = eval(txt);
-		setStainfo(info);
+	ajax("./network", function(txt) {
+		var info = JSON.parse(txt);
+		setStaInfo(info);
 	});
 }
 function init() {
-	ajax("./config", "GET", function(txt) {
-		data = eval("("+txt+")");
+	ajax("./config", function(txt) {
+		data = JSON.parse(txt);
 		setPage();
 	});
 }
@@ -684,7 +679,7 @@ function init() {
 $("#network .submit").on("click", function() {
 	var s = $("#ssid")[0].value,
 		p = $("#psw")[0].value,
-		q = "q=1&s="+s+"&p="+p;
+		q;
 	if(!s) {
 		alert("请输入ssid");
 		return;
@@ -693,11 +688,18 @@ $("#network .submit").on("click", function() {
 		alert("请输入至少8位密码");
 		return;
 	}
-	setStainfo([1,0]);
-	ajax("./network?"+encodeURI(q), "POST", function(txt) {
-		var info = eval(txt);
-		setStainfo(info);
-	});
+	if(window.location.host=="192.168.1.1") {
+		q = "q=1&s="+s+"&p="+p;
+		setStaInfo([1,0]);
+		ajax("./network?"+encodeURI(q), function(txt) {
+			var info = JSON.parse(txt);
+			setStaInfo(info);
+		});
+	} else {
+		q = "q=2&s="+s+"&p="+p;
+		setStaInfo([1,0]);
+		ajax("./network?"+encodeURI(q));
+	}
 });
 window.onload = init();
 
