@@ -602,16 +602,16 @@ function setClock() {
 			}
 		}
 		timer = setInterval(function() {
-			var t, h, m, s;
-			data.date++;
-			t = new Date(data.date*1000);
-			$("#time")[0].innerHTML = formatTime(t.getHours()) + " : " + formatTime(t.getMinutes()) + " : " + formatTime(t.getSeconds());
-			for(i=l.length; i--;) {
-				if(t/1000 > l[i]) {
+			// var t, h, m, s;
+			// data.date++;
+			// t = new Date(data.date*1000);
+			// $("#time")[0].innerHTML = formatTime(t.getHours()) + " : " + formatTime(t.getMinutes()) + " : " + formatTime(t.getSeconds());
+			// for(i=l.length; i--;) {
+			// 	if(t/1000 > l[i]) {
 					init();
-					break;
-				}
-			}
+			// 		break;
+			// 	}
+			// }
 		}, 1000);
 	} else {
 		$("#time")[0].innerHTML = "无法获得时间";
@@ -622,7 +622,6 @@ function setStainfo(info) {
 		$("#stainfo")[0].innerHTML = stainfo[info[0]] + " ip: " + info[1];
 	} else {
 		$("#stainfo")[0].innerHTML = stainfo[info[0]];
-		setDatetime();
 	}
 }
 function setAplist(ap) {
@@ -673,6 +672,7 @@ function init() {
 	ajax("./config", function(txt) {
 		data = JSON.parse(txt);
 		setPage();
+		setDatetime();
 	});
 }
 
