@@ -392,11 +392,6 @@ $.fn = $.prototype = {
 }
 $.fn.init.prototype = $.prototype;
 
-function formatTime(t) {
-	t = (t-0 < 10 ? "0" : "") + t;
-	return t;
-}
-
 // 数据
 var data = {};
 var stainfo = ["网络未连接", "网络连接中", "密码错误", "找不到网络", "连接失败", "网络已连接"];
@@ -478,6 +473,10 @@ function Socket(i) {
 		configSubmit(i+1, n, p_);
 	};
 	return elm;
+}
+function formatTime(t) {
+	t = (t-0 < 10 ? "0" : "") + +t;
+	return t;
 }
 function limitNum(v, l) {
 	v = v.match(/^[0-9]{0,2}/)[0];
@@ -602,16 +601,16 @@ function setClock() {
 			}
 		}
 		timer = setInterval(function() {
-			// var t, h, m, s;
-			// data.date++;
-			// t = new Date(data.date*1000);
-			// $("#time")[0].innerHTML = formatTime(t.getHours()) + " : " + formatTime(t.getMinutes()) + " : " + formatTime(t.getSeconds());
-			// for(i=l.length; i--;) {
-			// 	if(t/1000 > l[i]) {
+			var t, h, m, s;
+			data.date++;
+			t = new Date(data.date*1000);
+			$("#time")[0].innerHTML = formatTime(t.getHours()) + " : " + formatTime(t.getMinutes()) + " : " + formatTime(t.getSeconds());
+			for(i=l.length; i--;) {
+				if(t/1000 > l[i]) {
 					init();
-			// 		break;
-			// 	}
-			// }
+					break;
+				}
+			}
 		}, 1000);
 	} else {
 		$("#time")[0].innerHTML = "无法获得时间";

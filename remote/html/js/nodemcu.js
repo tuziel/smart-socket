@@ -129,7 +129,7 @@ function Plans(i, j) {
 	item.find(".s_m").on("input", function () {
 		$(this).val(limitNum($(this).val(), 60));
 	});
-	item.find(".s_h").on("change", function () {
+	item.find(".s_m").on("change", function () {
 		var t_ = new Date();
 		v = $(this).val();
 		$(this).val(formatTime(v));
