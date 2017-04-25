@@ -22,7 +22,7 @@ function initData(data_)
 	if(type(data_) ~= "table") then
 		data_ = {}
 	end
-	
+
 	-- 系统时间
 	data.date = (data_.date or 0)-0
 	-- wifi名称
@@ -339,7 +339,7 @@ function httpSrv(conn)
 
 		elseif(req.path == "/time") then
 			local t = req.query.t
-			if(t && heartbeat == 0) then
+			if(t and heartbeat == 0) then
 				date_, data.date = t, t
 			end
 			srvSend(conn, ""..date_)

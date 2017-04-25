@@ -1,7 +1,7 @@
 {
 	"message": "用来初始化数据,不要放空文件,貌似nodemcu不能读空文件,至少放个花括号{},文件最大支持1024字节,节约使用",
 	"ssid": "ssid",
-	"password": "psw",
+	"password": "password",
 	"message2": "socketcount为插口数量",
 	"socketcount": 2,
 	"socket": [
