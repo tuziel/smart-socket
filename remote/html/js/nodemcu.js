@@ -1,5 +1,6 @@
-// 数据
-var data = {};
+// 变量
+var data = {};						// 存放数据
+var remoteURL = "ws://test.com/";	// 服务器url
 
 // UI
 function Socket(i) {
@@ -178,7 +179,7 @@ function setInfo(info) {
 }
 
 // websocket
-var socket = new WebSocket("ws://test.com/");
+var socket = new WebSocket(remoteURL);
 socket.onopen = handleOpen;
 socket.onclose = handleClose;
 socket.onmessage = handleMsg;
