@@ -1,3 +1,4 @@
+<!-- nodemcu的传输速度有限, 请用js和css压缩工具压缩再使用 -->
 <!DOCTYPE HTML>
 <html lang="zh-CN"><head>
 	<meta charset="utf-8">
@@ -279,6 +280,11 @@
 	</form>
 
 <script>
+// 变量
+var data = {};
+var stainfo = ["网络未连接", "网络连接中", "密码错误", "找不到网络", "连接失败", "网络已连接"];
+var timer;
+
 // 简易ajax
 function ajax(url, funcS, funcF) {
 	var xhr = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
@@ -295,7 +301,8 @@ function ajax(url, funcS, funcF) {
 	}
 }
 
-// 不完全jquery查询器，基于querySelectorAll原生方法
+// 不完全jq查询器，基于querySelectorAll原生方法
+// 支持each, eq, on, show, hide, remove, css, addClass, removeClass方法
 function $(selector) {
 	return new $.fn.init(selector);
 }
@@ -339,26 +346,29 @@ $.fn = $.prototype = {
 		}, [event, callback]);
 		return this;
 	},
-	// 获取/设置样式
-	// 没有做属性名转换，只能用js属性例如`webkitTransition`
-	// 不支持对象
+	// 显示元素
 	show: function() {
 		this.each(this, function() {
 			this.style.display = "block";
 		});
 		return this;
 	},
+	// 隐藏元素
 	hide: function() {
 		this.each(this, function() {
 			this.style.display = "none";
 		});
 		return this;
 	},
+	// 删除元素
 	remove: function() {
 		this.each(this, function() {
 			this.parentNode.removeChild(this);
 		});
 	},
+	// 获取/设置样式
+	// 没有做属性名转换，只能用js属性例如`webkitTransition`
+	// 不支持对象
 	css: function(name, value) {
 		if(value === undefined) {
 			return this[0].style[name];
@@ -368,6 +378,7 @@ $.fn = $.prototype = {
 		}, [name, value]);
 		return this;
 	},
+	// 添加class
 	addClass: function(className) {
 		this.each(this, function() {
 			var reg = new RegExp("(\\s|^)"+arguments[0]+"(?=\\s|$)", "g");
@@ -380,6 +391,7 @@ $.fn = $.prototype = {
 		}, [className]);
 		return this;
 	},
+	// 删除class
 	removeClass: function(className) {
 		this.each(this, function() {
 			var reg = new RegExp("(\\s|^)"+arguments[0]+"(?=\\s|$)", "g");
@@ -392,12 +404,8 @@ $.fn = $.prototype = {
 }
 $.fn.init.prototype = $.prototype;
 
-// 数据
-var data = {};
-var stainfo = ["网络未连接", "网络连接中", "密码错误", "找不到网络", "连接失败", "网络已连接"];
-var timer;
-
-// UI
+// UI部分 呃...代码乱到我不想写备注
+// 生成开关模板
 function Socket(i) {
 	var elm = document.createElement("div"),
 		k = data.socket[i],
@@ -474,10 +482,12 @@ function Socket(i) {
 	};
 	return elm;
 }
+// 时间保持2位数显示
 function formatTime(t) {
 	t = (t-0 < 10 ? "0" : "") + +t;
 	return t;
 }
+// 限制时间在0到一个范围
 function limitNum(v, l) {
 	v = v.match(/^[0-9]{0,2}/)[0];
 	if(v-0 > l) {
@@ -485,6 +495,7 @@ function limitNum(v, l) {
 	}
 	return v;
 }
+// 生成计划模板
 function Plans(i, j) {
 	var item = document.createElement("li"),
 		p = data.socket[i].plans[j],
@@ -556,6 +567,7 @@ function Plans(i, j) {
 	}
 	return item;
 }
+// 生成wifi列表元素
 function Apitem(ssid, rssi) {
 	var item = document.createElement("li");
 	item.innerHTML = '<a class="apitem">'+ssid+'<i class="i-level"></i></a>';
@@ -572,7 +584,11 @@ $("#getap").on("click", function() {
 $(".mask").on("click", function() {
 	$(this).hide();
 });
+$("#network .submit").on("click", function() {
+	getApList();
+});
 
+// 生成页面
 function setPage() {
 	var i, j, l;
 	$(".socket").remove();
@@ -588,8 +604,9 @@ function setPage() {
 		}
 	}
 	setClock();
-	getStainfo();
+	getStaStatus();
 }
+// 生成时钟
 function setClock() {
 	clearInterval(timer);
 	if(data.date) {
@@ -605,6 +622,8 @@ function setClock() {
 			data.date++;
 			t = new Date(data.date*1000);
 			$("#time")[0].innerHTML = formatTime(t.getHours()) + " : " + formatTime(t.getMinutes()) + " : " + formatTime(t.getSeconds());
+			
+			// 每秒一次轮询nodemcu受不了，计划触发时再发送ajax请求
 			for(i=l.length; i--;) {
 				if(t/1000 > l[i]) {
 					init();
@@ -616,6 +635,7 @@ function setClock() {
 		$("#time")[0].innerHTML = "无法获得时间";
 	}
 }
+// 输出wifi连接信息
 function setStainfo(info) {
 	if(info[0] == 5) {
 		$("#stainfo")[0].innerHTML = stainfo[info[0]] + " ip: " + info[1];
@@ -623,6 +643,7 @@ function setStainfo(info) {
 		$("#stainfo")[0].innerHTML = stainfo[info[0]];
 	}
 }
+// 生成可用wifi列表
 function setAplist(ap) {
 	var rssi = 0;
 	for(ssid in ap) {
@@ -632,13 +653,15 @@ function setAplist(ap) {
 	}
 }
 
-// ajax
+// ajax请求
+// 设置/获取nodemcu时间
 function setDatetime() {
 	var t = Math.floor(new Date()/1000)
 	ajax("./time?t="+t, function(txt) {
 		data.date = txt-0;
 	});
 }
+// 点击开关时发送设置信息
 function switchClick(i, s) {
 	var q = "i="+i+"&s="+s;
 	ajax("./config?"+encodeURI(q), function(txt) {
@@ -646,6 +669,7 @@ function switchClick(i, s) {
 		setPage();
 	});
 }
+// 点击保存时发送设置信息
 function configSubmit(i, n, p) {
 	var q = "i="+i+"&n="+n+"&p="+p;
 	ajax("./config?"+encodeURI(q), function(txt) {
@@ -653,6 +677,7 @@ function configSubmit(i, n, p) {
 		setPage();
 	});
 }
+// 获取可用wifi列表
 function getapClick() {
 	ajax("./network?q=0", function(txt) {
 		var ap = JSON.parse(txt);
@@ -661,12 +686,14 @@ function getapClick() {
 		$("#stainfo")[0].innerHTML = "请输入密码(如无密码可留空)";
 	});
 }
-function getStainfo() {
+// 获取wifi状态
+function getStaStatus() {
 	ajax("./network", function(txt) {
 		var info = JSON.parse(txt);
 		setStainfo(info);
 	});
 }
+// 获取数据并生成页面
 function init() {
 	ajax("./config", function(txt) {
 		data = JSON.parse(txt);
@@ -674,8 +701,8 @@ function init() {
 		setDatetime();
 	});
 }
-
-$("#network .submit").on("click", function() {
+// 获取并生成ap列表
+function getApList() {
 	var s = $("#ssid")[0].value,
 		p = $("#psw")[0].value,
 		q;
@@ -698,7 +725,8 @@ $("#network .submit").on("click", function() {
 		q = "q=2&s="+s+"&p="+p;
 		ajax("./network?"+encodeURI(q));
 	}
-});
+}
+
 window.onload = init();
 
 </script>
