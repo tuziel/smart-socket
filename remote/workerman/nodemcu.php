@@ -3,7 +3,7 @@ require_once __DIR__ . '/Workerman/Autoloader.php';
 use Workerman\Worker;
 use Workerman\Lib\Timer;
 
-Worker::$stdoutFile = __DIR__ . '/Workerman/Autoloader.php';
+Worker::$stdoutFile = __DIR__ . '/nodemcu_debug.txt';
 
 // 心跳间隔30秒
 define('HEARTBEAT_TIME', 30);
@@ -102,13 +102,7 @@ function handle_message($connection, $data) {
 				$nodemcu_data->socket[$data_->id]->plans = $plans_;
 				$data_->plans = $plans_;
 			}
-			foreach($worker->connections as $conn) {
-				if($conn !== $nodemcu_conn) {
-					$conn->send(format_data($nodemcu_data));
-				} else {
-					$conn->send(json_encode($data_));
-				}
-			}
+			$nodemcu_conn->send(json_encode($data_));
 		} elseif($data_->type === 'time')  {
 			$connection->send('{"type":"time","time":'.date_timestamp_get(date_create()).'}');
 		}
