@@ -15,6 +15,7 @@ ip = nil						-- STA模式ip
 stastatus = 0					-- wifi.sta.status()
 remote = "ws://test.com"		-- 远程服务器地址
 heartbeat = 0					-- 心跳为0时断开websocket连接
+heartbeatmax = 20				-- 心跳初始为20秒
 
 
 --[[ 数据初始化 ]]
@@ -85,8 +86,7 @@ end
 
 -- 保存数据文件
 function saveData(filename)
-	local data_
-	data_ = cjson.encode(data)
+	local data_ = cjson.encode(data)
 
 	file.open(filename, 'w')
 	file.write(data_)
@@ -107,14 +107,23 @@ end
 
 --[[ 处理任务计划 ]]
 function checkPlans()
+	local flag = nil	-- 计划触发标识
+	
+	-- 循环处理排插计划
 	for i=1, data.socketcount do
 		local socket_ = data.socket[i]
 		local del = {}
+		
 		for j=1, #(socket_.plans) do
 			local plans_ = socket_.plans[j]
+			
+			-- 如果到达计划触发时间
 			if(date_ >= plans_.time) then
-				gpio.write(socket_.pin, 1-plans_.case)	-- 高电平断开
+				gpio.write(socket_.pin, plans_.case)	-- 低电平断开
+				-- gpio.write(socket_.pin, 1-plans_.case)	-- 高电平断开
 				data.socket[i].status = plans_.case
+				-- 如果是每日计划，时间向后加一天(86400s)
+				-- 如果不是，把计划放入删除列表
 				if(plans_.isdaily == 1) then
 					while(date_ >= plans_.time) do
 						plans_.time = plans_.time + 86400
@@ -125,15 +134,20 @@ function checkPlans()
 				end
 			end
 		end
-		for k=#del, 1, -1 do
-			table.remove(data.socket[i].plans, del[k])
-		end
+		-- 如果删除列表有元素，倒序将删除列表中的计划删除
 		if(#del > 0) then
-			saveData(datafile)
-			pushData()
+			for k=#del, 1, -1 do
+				table.remove(data.socket[i].plans, del[k])
+			end
+			flag = 1
 		end
 	end
-	collectgarbage()
+	if(flag) then
+		saveData(datafile)
+		-- 完全不能理解为什么下面这句pushData()没有把信息发出去
+		-- 明明可以打印出信息，然而服务器就是收不到。绝望的眼神.jpg
+		pushData()
+	end
 end
 
 
@@ -286,7 +300,8 @@ function httpSrv(conn)
 			if(i) then
 				if(n) then data.socket[i].name = n end
 				if(s) then
-					gpio.write(data.socket[i].pin, 1-s)
+					gpio.write(data.socket[i].pin, s)		-- 低电平断开
+					-- gpio.write(data.socket[i].pin, 1-s)		-- 高电平断开
 					data.socket[i].status = s-0
 				end
 				if(p) then
@@ -358,14 +373,14 @@ end
 
 --[[ 远程服务 ]]
 function onConnect(ws)
-	heartbeat = 30
+	heartbeat = heartbeatmax
 	print('got ws connection')
 	pushData()
 	ws:send('{"type":"time"}')
 end
 function onReceive(_, msg, opcode)
-	heartbeat = 30
-	print(msg)
+	heartbeat = heartbeatmax
+	print("got message ", msg)
 	local data_ = cjson.decode(msg)
 	if(data_.type == "time") then
 		data.date, date_ = data_.time, data_.time
@@ -375,11 +390,13 @@ function onReceive(_, msg, opcode)
 		if(i) then
 			if(n) then data.socket[data_.id+1].name = n end
 			if(s) then
-				gpio.write(data.socket[i].pin, 1-s)
+				gpio.write(data.socket[i].pin, s)		-- 低电平断开
+				-- gpio.write(data.socket[i].pin, 1-s)		-- 高电平断开
 				data.socket[i].status = s-0
 			end
 			if(p) then data.socket[data_.id+1].plans = p end
 			saveData(datafile)
+			pushData()
 		end
 	end
 end
@@ -389,7 +406,9 @@ function onClose(_, status)
 end
 function pushData()
 	if(heartbeat > 0) then
-		ws:send('{"type":"mcu", "data":'..cjson.encode(data)..'}')
+		local data_ = '{"type":"mcu", "key":"'..__KEY__..'", "data":'..cjson.encode(data)..'}'
+		ws:send(data_)
+		print("push ", data_)
 	end
 end
 
@@ -405,7 +424,8 @@ initData(loadData(datafile))
 for i=1, data.socketcount do
 	local socket_ = data.socket[i]
 	gpio.mode(socket_.pin, gpio.OUTPUT)
-	gpio.write(socket_.pin, 1-socket_.status)
+	gpio.write(socket_.pin, socket_.status)		-- 低电平断开
+	-- gpio.write(socket_.pin, 1-socket_.status)	-- 高电平断开
 end
 
 -- wifi设置
