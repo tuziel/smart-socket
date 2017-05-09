@@ -1,6 +1,6 @@
 // 变量
-var data = {};						// 存放数据
-var remoteURL = "ws://test.com/";	// 服务器url
+var data = {};					// 存放数据
+var remoteURL = "ws://remote";	// 服务器url
 
 // UI
 function Socket(i) {
@@ -190,17 +190,11 @@ function handleOpen() {
 }
 function handleClose() {
 	setInfo("无法连接到SmartHome服务器");
-	socket.close();
 };
 function handleMsg(evt) {
 	console.log("evt.data", evt.data);
 	var data_ = {};
-	try {
-		data_ = JSON.parse(evt.data);
-	} catch (err) {
-		data_.type = "msg";
-		data_.msg = evt.data;
-	}
+	data_ = JSON.parse(evt.data);
 
 	if(data_.type == "push") {
 		data = data_.data;
