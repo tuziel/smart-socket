@@ -8,12 +8,14 @@ gpio.mode(LED_SIGN, gpio.OUTPUT)
 
 
 --[[ 变量初始化 ]]
+__KEY__ = "ABCDEFGHIJKLMNOP"	-- 设备验证码，唯一值
 datafile = 'data.json'			-- 数据保存文件
 data = {}						-- 系统数据
+DF = 0							-- 系统数据修改标志
 date_ = 0						-- 系统时间
 ip = nil						-- STA模式ip
 stastatus = 0					-- wifi.sta.status()
-remote = "ws://test.com"		-- 远程服务器地址
+remote = "ws://remote"			-- 远程服务器地址
 heartbeat = 0					-- 心跳为0时断开websocket连接
 heartbeatmax = 20				-- 心跳初始为20秒
 
@@ -26,7 +28,7 @@ function initData(data_)
 
 	-- 设备id, 然而并没有用到
 	data.id = 0
-	-- 系统时间
+	-- 时间存档
 	data.date = (data_.date or 0)-0
 	-- wifi名称
 	data.ssid = data_.ssid ~= "" and data_.ssid or "ssid"
@@ -59,39 +61,43 @@ function initData(data_)
 					-- 触发操作
 					case = (plans_[j].case or 1)-0,
 					-- 是否每日循环
-					isdaily = (plans_[j].isdaily or 0)-0
+					loop = (plans_[j].loop or 0)-0
 				}
 			end
 		end
 	end
 
 	date_ = data.date
-	saveData(datafile)
+	DF = 1
 end
 
 -- 读取数据文件
-function loadData(filename)
+function loadData()
 	local data_ = {}
 
-	if file.open(filename) then
+	if file.open(datafile) then
 		data_ = file.read()
 		file.close()
-		print("loading " .. filename .. " Complete")
+		-- print("load ", datafile)
 		return cjson.decode(data_)
 	end
 
-	print(filename .. " does not exist")
+	-- print(datafile .. " does not exist")
 	return nil
 end
 
 -- 保存数据文件
-function saveData(filename)
-	local data_ = cjson.encode(data)
+function saveData()
+	local data_
 
-	file.open(filename, 'w')
+	-- 记录存档时间
+	data.date = date_
+	data_ = cjson.encode(data)
+
+	file.open(datafile, 'w')
 	file.write(data_)
 	file.close()
-	print('saved ' .. filename .. ' Complete')
+	print("save ", datafile)
 end
 
 
@@ -107,24 +113,22 @@ end
 
 --[[ 处理任务计划 ]]
 function checkPlans()
-	local flag = nil	-- 计划触发标识
-	
 	-- 循环处理排插计划
 	for i=1, data.socketcount do
 		local socket_ = data.socket[i]
 		local del = {}
-		
+
 		for j=1, #(socket_.plans) do
 			local plans_ = socket_.plans[j]
-			
+
 			-- 如果到达计划触发时间
 			if(date_ >= plans_.time) then
-				gpio.write(socket_.pin, plans_.case)	-- 低电平断开
-				-- gpio.write(socket_.pin, 1-plans_.case)	-- 高电平断开
+				-- gpio.write(socket_.pin, plans_.case)	-- 低电平断开
+				gpio.write(socket_.pin, 1-plans_.case)	-- 高电平断开
 				data.socket[i].status = plans_.case
 				-- 如果是每日计划，时间向后加一天(86400s)
 				-- 如果不是，把计划放入删除列表
-				if(plans_.isdaily == 1) then
+				if(plans_.loop == 1) then
 					while(date_ >= plans_.time) do
 						plans_.time = plans_.time + 86400
 					end
@@ -139,14 +143,8 @@ function checkPlans()
 			for k=#del, 1, -1 do
 				table.remove(data.socket[i].plans, del[k])
 			end
-			flag = 1
+			DF = 1
 		end
-	end
-	if(flag) then
-		saveData(datafile)
-		-- 完全不能理解为什么下面这句pushData()没有把信息发出去
-		-- 明明可以打印出信息，然而服务器就是收不到。绝望的眼神.jpg
-		pushData()
 	end
 end
 
@@ -291,76 +289,81 @@ end
 -- http服务器业务
 function httpSrv(conn)
     conn:on("receive", function(conn, payload)
+		-- print(payload)
 		local req = parseRequest(payload)
-		data.date = date_
 
 		if(req.path == "/config") then
 			local q = req.query or {}
-			local i, n, s, p = (q.i and q.i-0), q.n, q.s, q.p
-			if(i) then
-				if(n) then data.socket[i].name = n end
-				if(s) then
-					gpio.write(data.socket[i].pin, s)		-- 低电平断开
-					-- gpio.write(data.socket[i].pin, 1-s)		-- 高电平断开
-					data.socket[i].status = s-0
-				end
-				if(p) then
-					local j = 1
-					data.socket[i].plans = {}
-					for d, c, t in string.gmatch(p, "(%d)(%d)(%d+)") do
-						if not(d and c and t) then break end
-						data.socket[i].plans[j] = {
-							isdaily = d-0,
-							case = c-0,
-							time = t-0,
-						}
-						j = j+1
-					end
-				end
-				saveData(datafile)
-			end
-			srvSend(conn, cjson.encode(data), {type="application/json"})
-			pushData()
-
-		elseif(req.path == "/network") then
-			local q = req.query.q
-			if(q == "1" or q == "2") then
-				local ssid = req.query.s
-				if(ssid) then
-					if(q == "1") then
-						tmr.alarm(TMR_SERVER, 1000, 1, function()
-							if(stastatus ~= 1) then
-								srvSend(conn, '['..stastatus..',"'..(ip or '')..'"]')
-								tmr.unregister(TMR_SERVER)
+			-- type, set
+			local t, s = (q.t and q.t-0), (q.s and q.s-0)
+			-- socket
+			if(t == 1) then
+				if(s == 1) then
+					-- id, target, status, plans
+					local i, n, o, p = (q.i and q.i-0), q.n, (q.o and q.o-0), q.p
+					if(i) then
+						if(n) then data.socket[i].name = n end
+						if(o) then
+							-- gpio.write(data.socket[i].pin, o)		-- 低电平断开
+							gpio.write(data.socket[i].pin, 1-o)		-- 高电平断开
+							data.socket[i].status = o
+						end
+						if(p) then
+							-- 重写任务计划
+							local j = 1
+							data.socket[i].plans = {}
+							-- 解析字符串，格式为12位数字字符串：1位loop+1位case+10位时间戳
+							for lp, cs, tm in string.gmatch(p, "(%d)(%d)(%d+)") do
+								-- 找不到相应格式字符串时停止解析
+								if not(lp and cs and tm) then break end
+								data.socket[i].plans[j] = {
+									loop = lp-0,
+									case = cs-0,
+									time = tm-0,
+								}
+								j = j+1
 							end
-						end)
-					else
-						srvClose(conn);
+						end
+						DF = 1
 					end
-					local psw = req.query.p
+					srvSend(conn, "OK")
+				else
+					srvSend(conn, cjson.encode(data), {type="application/json"})
+				end
+
+			-- time
+			elseif(t == 2) then
+				local d = q.d
+				-- 无法连接服务器时使用客户端的时间作为系统时间
+				if(d and heartbeat == 0) then
+					date_ = d-0
+				end
+				srvSend(conn, ""..date_)
+
+			-- sta
+			elseif(t == 11) then
+				if(s == 1) then
+					local ssid, psw = q.i, q.p
 					psw = psw and #psw >= 8 and psw or "12345678"
 					data.ssid = ssid
 					data.password = psw
 					wifi.sta.config(ssid, psw)
-					saveData(datafile)
+					DF = 1
+					srvClose(conn);
 				else
-					srvSend(conn, '['..stastatus..',"'..(ip or '')..'"]')
+					srvSend(conn, '['..stastatus..',"'..(ip or '')..'"]', {type="application/json"})
 				end
-			elseif(q == "0") then
+
+			-- staap
+			elseif(t == 13) then
 				wifi.sta.getap(function(table)
 					srvSend(conn, cjson.encode(table), {type="application/json"})
 				end)
-			else
-				srvSend(conn, '['..stastatus..',"'..(ip or '')..'"]')
-			end
 
-		elseif(req.path == "/time") then
-			local t = req.query.t
-			if(t and heartbeat == 0) then
-				date_, data.date = t, t
+			-- error
+			else
+				srvSend(conn, '{"type":"error"}', {type="application/json"})
 			end
-			saveData(datafile)
-			srvSend(conn, ""..date_)
 
 		else
 			parsePath(conn, req.path)
@@ -372,43 +375,47 @@ end
 
 
 --[[ 远程服务 ]]
+-- 成功连接
 function onConnect(ws)
+	-- 开始心跳
 	heartbeat = heartbeatmax
-	print('got ws connection')
+	-- print('got ws connection')
 	pushData()
 	ws:send('{"type":"time"}')
 end
+-- 收到数据
 function onReceive(_, msg, opcode)
+	-- 持续心跳
 	heartbeat = heartbeatmax
-	print("got message ", msg)
+	-- print(msg)
 	local data_ = cjson.decode(msg)
 	if(data_.type == "time") then
-		data.date, date_ = data_.time, data_.time
-		saveData(datafile)
+		date_ = data_.time
 	elseif(data_.type == "set") then
 		local i, n, s, p = data_.id+1, data_.name, data_.status, data_.plans
 		if(i) then
 			if(n) then data.socket[data_.id+1].name = n end
 			if(s) then
-				gpio.write(data.socket[i].pin, s)		-- 低电平断开
-				-- gpio.write(data.socket[i].pin, 1-s)		-- 高电平断开
+				-- gpio.write(data.socket[i].pin, s-0)		-- 低电平断开
+				gpio.write(data.socket[i].pin, 1-s)		-- 高电平断开
 				data.socket[i].status = s-0
 			end
 			if(p) then data.socket[data_.id+1].plans = p end
-			saveData(datafile)
-			pushData()
+			DF = 1
 		end
 	end
 end
+--连接关闭
 function onClose(_, status)
+	-- 停止心跳
 	heartbeat = 0
-	print('connection closed', status)
+	-- print('connection closed', status)
 end
 function pushData()
 	if(heartbeat > 0) then
 		local data_ = '{"type":"mcu", "key":"'..__KEY__..'", "data":'..cjson.encode(data)..'}'
 		ws:send(data_)
-		print("push ", data_)
+		-- print("push ", data_)
 	end
 end
 
@@ -418,14 +425,14 @@ end
 gpio.write(LED_SIGN, gpio.LOW)
 
 -- 加载数据文件
-initData(loadData(datafile))
+initData(loadData())
 
 -- 恢复开关状态
 for i=1, data.socketcount do
 	local socket_ = data.socket[i]
 	gpio.mode(socket_.pin, gpio.OUTPUT)
-	gpio.write(socket_.pin, socket_.status)		-- 低电平断开
-	-- gpio.write(socket_.pin, 1-socket_.status)	-- 高电平断开
+	-- gpio.write(socket_.pin, socket_.status)		-- 低电平断开
+	gpio.write(socket_.pin, 1-socket_.status)	-- 高电平断开
 end
 
 -- wifi设置
@@ -469,7 +476,7 @@ tmr.alarm(TMR_MAINLOOP, 1000, 1, function()
 		end
 	end
 
-	-- wifi状态(不用事件注册eventMonReg是因为内存不够，不用RCT等等同理)
+	-- wifi状态(不用事件注册eventMonReg是因为内存不够，不用RTC等等同理)
 	if(stastatus ~= wifi.sta.status()) then
 		stastatus = wifi.sta.status()
 
@@ -485,9 +492,15 @@ tmr.alarm(TMR_MAINLOOP, 1000, 1, function()
 			print("STA_FAIL")
 		elseif(stastatus == 5) then
 			ip = wifi.sta.getip()
-			print("STA_GOTIP " .. ip)
 			ws:connect(remote)
+			print("STA_GOTIP " .. ip)
 		end
+	end
+
+	if(DF == 1) then
+		saveData()
+		pushData()
+		DF = 0
 	end
 
 	checkPlans()
