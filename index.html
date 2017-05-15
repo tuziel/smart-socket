@@ -285,18 +285,25 @@ var data = {};
 var stainfo = ["网络未连接", "网络连接中", "密码错误", "找不到网络", "连接失败", "网络已连接"];
 var timer;
 
-// 简易ajax
-function ajax(url, funcS, funcF) {
-	var xhr = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
-	xhr.open("GET", url, true);
-	xhr.send();
-	xhr.onreadystatechange = function() {
-		if(xhr.readyState == 4) {
-			if(xhr.status == 200 && funcS) {
-				funcS(xhr.responseText);
-			} else if(funcF) {
-				funcF(xhr.status);
-			}
+// 简易ajax，参数分别为URL、JSON格式的查询参数，请求成功时的回调函数，失败时的回调函数
+function ajaxGET(url, query, funcS, funcF) {
+	var req = window.XMLHttpRequest ?
+		new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
+	var f = 0;
+	if (query) {
+		for (var i in query) {
+			url += (f ? "&" : "?") + [i] + "=" + query[i];
+			f = 1;
+		}
+	}
+	url = encodeURI(url);
+	req.open('GET', url, true);
+	req.send();
+	req.onreadystatechange = function () {
+		if (req.readyState == 4 && req.status == 200) {
+			if (funcS) funcS(req.responseText);
+		} else {
+			if (funcF) funcF(req.status);
 		}
 	}
 }
@@ -457,7 +464,7 @@ function Socket(i) {
 			par;
 		data.socket[i].plans[l] = {
 			time: Math.floor(new Date().setSeconds(0)/1000) + 6e2,
-			isdaily: 0,
+			loop: 0,
 			"case": 0
 		}
 		while((par = cur.parentNode).className != "detail") {
@@ -475,7 +482,7 @@ function Socket(i) {
 			j;
 		for(j=0; j<p.length; j++) {
 			if(p[j]) {
-				p_ += "" + p[j].isdaily + p[j]["case"] + p[j].time + "_";
+				p_ += "" + p[j].loop + p[j]["case"] + p[j].time + "_";
 			}
 		}
 		configSubmit(i+1, n, p_);
@@ -499,7 +506,7 @@ function limitNum(v, l) {
 function Plans(i, j) {
 	var item = document.createElement("li"),
 		p = data.socket[i].plans[j],
-		d = p.isdaily ? 1 : 0,
+		d = p.loop ? 1 : 0,
 		c = p["case"] ? 1 : 0,
 		t = new Date(p.time*1000),
 		h = t.getHours(),
@@ -524,7 +531,7 @@ function Plans(i, j) {
 	item.querySelector(".s_d").onclick = function() {
 		d = 1 - d;
 		this.value = d == 1 ? "每天" : "一次";
-		data.socket[i].plans[j].isdaily = d;
+		data.socket[i].plans[j].loop = d;
 	}
 	item.querySelector(".s_h").oninput = function() {
 		this.value = limitNum(this.value, 23);
@@ -584,10 +591,6 @@ $("#getap").on("click", function() {
 $(".mask").on("click", function() {
 	$(this).hide();
 });
-$("#network .submit").on("click", function() {
-	getApList();
-});
-
 // 生成页面
 function setPage() {
 	var i, j, l;
@@ -604,7 +607,6 @@ function setPage() {
 		}
 	}
 	setClock();
-	getStaStatus();
 }
 // 生成时钟
 function setClock() {
@@ -617,13 +619,12 @@ function setClock() {
 				l[k++] = p[j].time;
 			}
 		}
+		// 每秒一次轮询nodemcu受不了，计划触发时再发送ajax请求
 		timer = setInterval(function() {
 			var t, h, m, s;
 			data.date++;
 			t = new Date(data.date*1000);
 			$("#time")[0].innerHTML = formatTime(t.getHours()) + " : " + formatTime(t.getMinutes()) + " : " + formatTime(t.getSeconds());
-			
-			// 每秒一次轮询nodemcu受不了，计划触发时再发送ajax请求
 			for(i=l.length; i--;) {
 				if(t/1000 > l[i]) {
 					init();
@@ -654,32 +655,54 @@ function setAplist(ap) {
 }
 
 // ajax请求
+// 请求插口数据
+function setSocket() {
+	ajaxGET("config", {
+		t: 1
+	}, function(txt) {
+		data = JSON.parse(txt);
+		setPage();
+	});
+}
 // 设置/获取nodemcu时间
 function setDatetime() {
-	var t = Math.floor(new Date()/1000)
-	ajax("./time?t="+t, function(txt) {
+	ajaxGET("config", {
+		t: 2,
+		d: Math.floor(new Date()/1000)
+	}, function(txt) {
 		data.date = txt-0;
 	});
 }
 // 点击开关时发送设置信息
 function switchClick(i, s) {
-	var q = "i="+i+"&s="+s;
-	ajax("./config?"+encodeURI(q), function(txt) {
-		data = JSON.parse(txt);
-		setPage();
+	ajaxGET("config", {
+		t: 1,
+		s: 1,
+		i: i,
+		o: s
 	});
+	setTimeout(function() {
+		setSocket();
+	}, 1000);
 }
 // 点击保存时发送设置信息
 function configSubmit(i, n, p) {
-	var q = "i="+i+"&n="+n+"&p="+p;
-	ajax("./config?"+encodeURI(q), function(txt) {
-		data = JSON.parse(txt);
-		setPage();
+	ajaxGET("config", {
+		t: 1,
+		s: 1,
+		i: i,
+		n: n,
+		p: p
 	});
+	setTimeout(function() {
+		setSocket();
+	}, 1000);
 }
 // 获取可用wifi列表
 function getapClick() {
-	ajax("./network?q=0", function(txt) {
+	ajaxGET("config", {
+		t: 13
+	}, function(txt) {
 		var ap = JSON.parse(txt);
 		$(".mask").show();
 		setAplist(ap);
@@ -687,22 +710,22 @@ function getapClick() {
 	});
 }
 // 获取wifi状态
-function getStaStatus() {
-	ajax("./network", function(txt) {
+function getStainfo() {
+	ajaxGET("config", {
+		t: 11
+	}, function(txt) {
 		var info = JSON.parse(txt);
 		setStainfo(info);
 	});
 }
 // 获取数据并生成页面
 function init() {
-	ajax("./config", function(txt) {
-		data = JSON.parse(txt);
-		setPage();
-		setDatetime();
-	});
+	setSocket();
+	setDatetime();
+	getStainfo();
 }
-// 获取并生成ap列表
-function getApList() {
+// 提交sta的账号密码
+$("#network .submit").on("click", function() {
 	var s = $("#ssid")[0].value,
 		p = $("#psw")[0].value,
 		q;
@@ -715,18 +738,17 @@ function getApList() {
 		return;
 	}
 	setStainfo([1,0]);
-	if(window.location.host=="192.168.1.1") {
-		q = "q=1&s="+s+"&p="+p;
-		ajax("./network?"+encodeURI(q), function(txt) {
-			var info = JSON.parse(txt);
-			setStainfo(info);
-		});
-	} else {
-		q = "q=2&s="+s+"&p="+p;
-		ajax("./network?"+encodeURI(q));
-	}
-}
-
+	ajaxGET("config", {
+		t: 11,
+		s: 1,
+		i: s,
+		p: p
+	});
+	setTimeout(function() {
+		getStainfo();
+	}, 1000);
+});
+// 页面初始化
 window.onload = init();
 
 </script>
